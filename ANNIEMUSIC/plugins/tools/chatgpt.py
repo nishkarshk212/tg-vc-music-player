@@ -8,7 +8,7 @@ import requests, config
 
 openai.api_key = "os.environ.get(OPENAI_API_KEY)"#chatgpt
 
-api_key ="995e3267-53f1-496e-82e3-39754eab99dc" #deepai
+api_key ="bcbddea0-f2bd-4b4e-af1d-225b30893fcd" #deepai
 
 
 @app.on_message(filters.command(["chatgpt","ai","ask"],  prefixes=["+", ".", "/"]))

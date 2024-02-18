@@ -8,9 +8,9 @@ import requests, config
 import requests as r
 # ----------------------------------------
 # ----------------------------------------
-openai.api_key = "FJnpI0mL2qbcQOU9jSoqT3BlbkFJNLPg9pHWWEUYI4cF9vTQ"
+openai.api_key = "os.environ.get(OPENAI_API_KEY)"
 
-api_key = "FJnpI0mL2qbcQOU9jSoqT3BlbkFJNLPg9pHWWEUYI4cF9vTQ"
+api_key = "os.environ.get(OPENAI_API_KEY)"
 
 
 # ----------------------------------------

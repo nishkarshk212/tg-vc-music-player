@@ -17,6 +17,7 @@ class NexGenBotsSearch:
     def __init__(self):
         self.base_url = "https://pvtz.nexgenbots.xyz"
         self.song_url = f"{self.base_url}/song"
+        self.video_url = f"{self.base_url}/video"
         self.api_key = API_KEY or "NxGBNexGenBots448436"
         self.session: Optional[aiohttp.ClientSession] = None
         
@@ -34,6 +35,52 @@ class NexGenBotsSearch:
         """Close the session"""
         if self.session and not self.session.closed:
             await self.session.close()
+    
+    async def get_video_download(self, video_id: str) -> Optional[str]:
+        """
+        Get download URL for a specific video using NexGenBots API
+        
+        Args:
+            video_id: YouTube video ID
+            
+        Returns:
+            Download URL or None
+        """
+        if not self.api_key:
+            LOGGER("NexGenBots").warning("API_KEY not configured, falling back to default")
+        
+        try:
+            session = await self._get_session()
+            
+            # Use /video/{vidid} endpoint with api parameter
+            url = f"{self.video_url}/{video_id}"
+            params = {
+                "api": self.api_key
+            }
+            
+            async with session.get(url, params=params, timeout=15) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    LOGGER("NexGenBots").info(f"Got video download URL for {video_id}")
+                    return data  # Return full response for processing
+                elif response.status == 401:
+                    LOGGER("NexGenBots").error("Invalid API key!")
+                    return None
+                else:
+                    LOGGER("NexGenBots").error(f"Video API error: {response.status}")
+                    try:
+                        error_data = await response.json()
+                        LOGGER("NexGenBots").error(f"Error details: {error_data}")
+                    except:
+                        pass
+                    return None
+                    
+        except asyncio.TimeoutError:
+            LOGGER("NexGenBots").error("Request timeout!")
+            return None
+        except Exception as e:
+            LOGGER("NexGenBots").error(f"Failed to get video: {e}")
+            return None
     
     async def get_song_download(self, video_id: str) -> Optional[str]:
         """

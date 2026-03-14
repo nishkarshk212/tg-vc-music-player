@@ -119,8 +119,38 @@ async def download_video(link: str):
         file_path = f"{download_folder}/{video_id}.{ext}"
         if os.path.exists(file_path):
             return file_path
+    
+    # Try NexGenBots API first
+    try:
+        from AnnieXMedia.platforms.NexGenBots import get_nexgen_client
+        client = get_nexgen_client()
         
-    video_url = f"{VIDEO_API_URL}/video/{video_id}?api={API_KEY}"
+        # Get video download data from NexGenBots
+        download_data = await client.get_video_download(video_id)
+        if download_data and download_data.get("status") == "done":
+            download_url = download_data.get("link")
+            if download_url:
+                # Download the file
+                file_extension = download_data.get("format", "mp4").lower()
+                file_name = f"{video_id}.{file_extension}"
+                file_path = os.path.join(download_folder, file_name)
+                os.makedirs(download_folder, exist_ok=True)
+                
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(download_url) as response:
+                        with open(file_path, 'wb') as f:
+                            while True:
+                                chunk = await response.content.read(8192)
+                                if not chunk:
+                                    break
+                                f.write(chunk)
+                return file_path
+    except Exception as e:
+        print(f"[NexGenBots Video Error] {e}")
+    
+    # Fallback to custom API if configured
+    if VIDEO_API_URL and API_KEY:
+        video_url = f"{VIDEO_API_URL}/video/{video_id}?api={API_KEY}"
     async with aiohttp.ClientSession() as session:
         for attempt in range(10):
             try:
@@ -314,7 +344,24 @@ class YouTubeAPI:
         if "&" in link:
             link = link.split("&")[0]
         
-        # Try video API first
+        # Try NexGenBots API first for direct download
+        try:
+            from AnnieXMedia.platforms.NexGenBots import get_nexgen_client
+            client = get_nexgen_client()
+            
+            # Extract video ID
+            video_id = link.split('v=')[-1].split('&')[0]
+            download_data = await client.get_video_download(video_id)
+            
+            if download_data and download_data.get("status") == "done":
+                download_url = download_data.get("link")
+                if download_url:
+                    LOGGER(__name__).info(f"Using NexGenBots API for video: {video_id}")
+                    return 1, download_url
+        except Exception as e:
+            LOGGER(__name__).error(f"NexGenBots video API failed: {e}")
+        
+        # Try video API fallback
         try:
             downloaded_file = await download_video(link)
             if downloaded_file:

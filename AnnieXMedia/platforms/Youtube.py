@@ -76,7 +76,17 @@ async def cached_youtube_search(query: str) -> List[Dict]:
         if len(_cache) > YOUTUBE_META_MAX:
             _cache.clear()
 
-    # Use direct YouTube search (NexGenBots API disabled - 404 errors)
+    # Try NexGenBots API first (with correct apikey parameter)
+    try:
+        result = await nexgen_search(query, limit=10)
+        if result:
+            async with _cache_lock:
+                _cache[key] = (now, result)
+            return result
+    except Exception as e:
+        LOGGER("Youtube").debug(f"NexGenBots search failed, falling back to YouTube: {e}")
+
+    # Fallback to direct YouTube search
     try:
         data = await VideosSearch(query, limit=10).next()
         result = data.get("result", [])

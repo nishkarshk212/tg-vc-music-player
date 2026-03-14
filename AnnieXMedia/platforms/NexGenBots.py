@@ -51,11 +51,11 @@ class NexGenBotsSearch:
         try:
             session = await self._get_session()
             
-            # Use specific endpoint: https://api.nexgenbots.xyz/api/search
+            # Use correct endpoint with apikey parameter
             params = {
                 "query": query,
                 "limit": limit,
-                "key": self.api_key
+                "apikey": self.api_key  # Changed from 'key' to 'apikey'
             }
             
             async with session.get(self.base_url, params=params, timeout=10) as response:

@@ -14,7 +14,7 @@ class NexGenBotsSearch:
     
     def __init__(self):
         self.base_url = "https://api.nexgenbots.xyz/api/search"
-        self.api_key = API_KEY or "30DxNexGenBotsf57c86"
+        self.api_key = API_KEY or "NxGBNexGenBots448436"
         self.session: Optional[aiohttp.ClientSession] = None
         
     async def _get_session(self) -> aiohttp.ClientSession:

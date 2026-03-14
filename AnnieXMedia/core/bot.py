@@ -1,4 +1,5 @@
 ﻿# Authored By Certified Coders © 2025
+import asyncio
 import sys
 from pyrogram import Client, errors
 from pyrogram.enums import ChatMemberStatus
@@ -27,20 +28,21 @@ class MusicBotClient(Client):
         self.mention = me.mention
 
         try:
-            await self.send_message(
-                config.LOGGER_ID,
-                (
-                    f"<u><b>» {self.mention} ʙᴏᴛ sᴛᴀʀᴛᴇᴅ :</b></u>\n\n"
-                    f"ɪᴅ : <code>{self.id}</code>\n"
-                    f"ɴᴀᴍᴇ : {self.name}\n"
-                    f"ᴜsᴇʀɴᴀᴍᴇ : @{self.username}"
-                ),
+            await asyncio.sleep(2)  # Wait for bot to fully initialize
+            msg = (
+                f"<u><b>» {self.mention} ʙᴏᴛ sᴛᴀʀᴛᴇᴅ :</b></u>\n\n"
+                f"ɪᴅ : <code>{self.id}</code>\n"
+                f"ɴᴀᴍᴇ : {self.name}\n"
+                f"ᴜsᴇʀɴᴀᴍᴇ : @{self.username}"
             )
-        except (errors.ChannelInvalid, errors.PeerIdInvalid):
-            LOGGER(__name__).error("❌ Bot cannot access the log group/channel – add & promote it first!")
+            LOGGER(__name__).info(f"Attempting to send message to log group {config.LOGGER_ID}...")
+            await self.send_message(config.LOGGER_ID, msg)
+            LOGGER(__name__).info("Successfully sent message to log group!")
+        except (errors.ChannelInvalid, errors.PeerIdInvalid) as e:
+            LOGGER(__name__).error(f"❌ Bot cannot access the log group/channel – add & promote it first! Error: {type(e).__name__}: {e}")
             sys.exit()
         except Exception as exc:
-            LOGGER(__name__).error(f"❌ Bot has failed to access the log group.\nReason: {type(exc).__name__}")
+            LOGGER(__name__).error(f"❌ Bot has failed to access the log group. Reason: {type(exc).__name__}: {exc}")
             sys.exit()
 
         try:

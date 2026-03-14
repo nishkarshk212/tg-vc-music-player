@@ -45,10 +45,48 @@ class NexGenBotsSearch:
         Returns:
             List of search results with video information
         """
-        # Temporarily disabled - API returning 404
-        # Will fallback to direct YouTube search
-        LOGGER("NexGenBots").debug(f"NexGenBots API temporarily disabled, using fallback")
-        return []
+        if not self.api_key:
+            LOGGER("NexGenBots").warning("API_KEY not configured, falling back to default")
+        
+        try:
+            session = await self._get_session()
+            
+            # Try different possible endpoints
+            endpoints_to_try = [
+                f"{self.base_url}?query={query}&limit={limit}",
+                f"https://api.nexgenbots.xyz/v1/search?query={query}&limit={limit}",
+                f"https://nexgenbots.xyz/api/search?q={query}&limit={limit}",
+            ]
+            
+            for endpoint in endpoints_to_try:
+                try:
+                    params = {"key": self.api_key}
+                    async with session.get(endpoint, params=params, timeout=10) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            results = data.get("results", []) or data.get("data", []) or data.get("videos", [])
+                            
+                            if results:
+                                LOGGER("NexGenBots").info(f"Found {len(results)} results for '{query}'")
+                                return self._format_results(results)
+                            else:
+                                LOGGER("NexGenBots").debug(f"No results found for '{query}'")
+                                continue
+                        elif response.status != 404:
+                            LOGGER("NexGenBots").error(f"API error: {response.status}")
+                except Exception:
+                    continue
+            
+            # If all endpoints fail, return empty
+            LOGGER("NexGenBots").debug("All API endpoints failed, using fallback")
+            return []
+                    
+        except asyncio.TimeoutError:
+            LOGGER("NexGenBots").error("Request timeout!")
+            return []
+        except Exception as e:
+            LOGGER("NexGenBots").error(f"Search failed: {e}")
+            return []
     
     def _format_results(self, results: List[Dict]) -> List[Dict]:
         """Format API results to match expected format"""

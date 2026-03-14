@@ -51,35 +51,36 @@ class NexGenBotsSearch:
         try:
             session = await self._get_session()
             
-            # Try different possible endpoints
-            endpoints_to_try = [
-                f"{self.base_url}?query={query}&limit={limit}",
-                f"https://api.nexgenbots.xyz/v1/search?query={query}&limit={limit}",
-                f"https://nexgenbots.xyz/api/search?q={query}&limit={limit}",
-            ]
+            # Use specific endpoint: https://api.nexgenbots.xyz/api/search
+            params = {
+                "query": query,
+                "limit": limit,
+                "key": self.api_key
+            }
             
-            for endpoint in endpoints_to_try:
-                try:
-                    params = {"key": self.api_key}
-                    async with session.get(endpoint, params=params, timeout=10) as response:
-                        if response.status == 200:
-                            data = await response.json()
-                            results = data.get("results", []) or data.get("data", []) or data.get("videos", [])
-                            
-                            if results:
-                                LOGGER("NexGenBots").info(f"Found {len(results)} results for '{query}'")
-                                return self._format_results(results)
-                            else:
-                                LOGGER("NexGenBots").debug(f"No results found for '{query}'")
-                                continue
-                        elif response.status != 404:
-                            LOGGER("NexGenBots").error(f"API error: {response.status}")
-                except Exception:
-                    continue
-            
-            # If all endpoints fail, return empty
-            LOGGER("NexGenBots").debug("All API endpoints failed, using fallback")
-            return []
+            async with session.get(self.base_url, params=params, timeout=10) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    results = data.get("results", []) or data.get("data", []) or data.get("videos", [])
+                    
+                    if results:
+                        LOGGER("NexGenBots").info(f"Found {len(results)} results for '{query}'")
+                        return self._format_results(results)
+                    else:
+                        LOGGER("NexGenBots").debug(f"No results found for '{query}'")
+                        return []
+                        
+                elif response.status == 401:
+                    LOGGER("NexGenBots").error("Invalid API key!")
+                    return []
+                    
+                elif response.status == 429:
+                    LOGGER("NexGenBots").warning("Rate limit exceeded!")
+                    return []
+                    
+                else:
+                    LOGGER("NexGenBots").error(f"API error: {response.status}")
+                    return []
                     
         except asyncio.TimeoutError:
             LOGGER("NexGenBots").error("Request timeout!")

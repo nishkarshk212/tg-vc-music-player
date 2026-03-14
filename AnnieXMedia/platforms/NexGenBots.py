@@ -17,7 +17,6 @@ class NexGenBotsSearch:
     def __init__(self):
         self.base_url = "https://pvtz.nexgenbots.xyz"
         self.song_url = f"{self.base_url}/song"
-        self.video_url = f"{self.base_url}/video"
         self.api_key = API_KEY or "NxGBNexGenBots448436"
         self.session: Optional[aiohttp.ClientSession] = None
         
@@ -36,12 +35,14 @@ class NexGenBotsSearch:
         if self.session and not self.session.closed:
             await self.session.close()
     
-    async def get_video_download(self, video_id: str) -> Optional[str]:
+    async def get_video_download(self, video_id: str, format: str = "mp4") -> Optional[str]:
         """
         Get download URL for a specific video using NexGenBots API
+        Uses the /song endpoint with format parameter to get video
         
         Args:
             video_id: YouTube video ID
+            format: Desired format (mp4, webm, etc.)
             
         Returns:
             Download URL or None
@@ -52,16 +53,17 @@ class NexGenBotsSearch:
         try:
             session = await self._get_session()
             
-            # Use /video/{vidid} endpoint with api parameter
-            url = f"{self.video_url}/{video_id}"
+            # Use /song/{vidid} endpoint with api and format parameters
+            url = f"{self.song_url}/{video_id}"
             params = {
-                "api": self.api_key
+                "api": self.api_key,
+                "format": format
             }
             
             async with session.get(url, params=params, timeout=15) as response:
                 if response.status == 200:
                     data = await response.json()
-                    LOGGER("NexGenBots").info(f"Got video download URL for {video_id}")
+                    LOGGER("NexGenBots").info(f"Got video download URL for {video_id} in {format} format")
                     return data  # Return full response for processing
                 elif response.status == 401:
                     LOGGER("NexGenBots").error("Invalid API key!")

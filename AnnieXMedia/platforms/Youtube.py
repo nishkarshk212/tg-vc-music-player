@@ -18,6 +18,7 @@ from AnnieXMedia.utils.downloader import yt_dlp_download
 from AnnieXMedia.utils.errors import capture_internal_err
 from AnnieXMedia.utils.formatters import time_to_seconds
 from AnnieXMedia.utils.tuning import YTDLP_TIMEOUT, YOUTUBE_META_MAX, YOUTUBE_META_TTL
+from AnnieXMedia.platforms.NexGenBots import nexgen_search
 
 
 # === Caches ===
@@ -75,6 +76,17 @@ async def cached_youtube_search(query: str) -> List[Dict]:
         if len(_cache) > YOUTUBE_META_MAX:
             _cache.clear()
 
+    # Try NexGenBots API first
+    try:
+        result = await nexgen_search(query, limit=10)
+        if result:
+            async with _cache_lock:
+                _cache[key] = (now, result)
+            return result
+    except Exception as e:
+        LOGGER("Youtube").debug(f"NexGenBots search failed, falling back to YouTube: {e}")
+
+    # Fallback to direct YouTube search
     try:
         data = await VideosSearch(query, limit=1).next()
         result = data.get("result", [])

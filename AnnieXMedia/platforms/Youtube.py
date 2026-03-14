@@ -35,7 +35,39 @@ async def download_song(link: str):
         file_path = f"{download_folder}/{video_id}.{ext}"
         if os.path.exists(file_path):
             return file_path
-        
+    
+    # Check if API_URL is configured
+    if not API_URL or not API_KEY:
+        print("[INFO] API_URL not configured, using NexGenBots API as fallback")
+        try:
+            from AnnieXMedia.platforms.NexGenBots import get_nexgen_client
+            client = get_nexgen_client()
+            
+            # Get download data from NexGenBots
+            download_data = await client.get_song_download(video_id)
+            if download_data and download_data.get("status") == "done":
+                download_url = download_data.get("link")
+                if download_url:
+                    # Download the file
+                    file_extension = download_data.get("format", "mp3").lower()
+                    file_name = f"{video_id}.{file_extension}"
+                    file_path = os.path.join(download_folder, file_name)
+                    os.makedirs(download_folder, exist_ok=True)
+                    
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(download_url) as response:
+                            with open(file_path, 'wb') as f:
+                                while True:
+                                    chunk = await response.content.read(8192)
+                                    if not chunk:
+                                        break
+                                    f.write(chunk)
+                    return file_path
+        except Exception as e:
+            print(f"[NexGenBots Fallback Error] {e}")
+            return None
+    
+    # Use custom API if configured
     song_url = f"{API_URL}/song/{video_id}?api={API_KEY}"
     async with aiohttp.ClientSession() as session:
         for attempt in range(10):

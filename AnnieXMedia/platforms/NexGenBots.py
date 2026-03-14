@@ -45,48 +45,10 @@ class NexGenBotsSearch:
         Returns:
             List of search results with video information
         """
-        if not self.api_key:
-            LOGGER("NexGenBots").warning("API_KEY not configured, falling back to default")
-        
-        try:
-            session = await self._get_session()
-            
-            params = {
-                "query": query,
-                "limit": limit,
-                "type": "video"
-            }
-            
-            async with session.get(self.base_url, params=params, timeout=10) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    results = data.get("results", [])
-                    
-                    if results:
-                        LOGGER("NexGenBots").info(f"Found {len(results)} results for '{query}'")
-                        return self._format_results(results)
-                    else:
-                        LOGGER("NexGenBots").debug(f"No results found for '{query}'")
-                        return []
-                        
-                elif response.status == 401:
-                    LOGGER("NexGenBots").error("Invalid API key!")
-                    return []
-                    
-                elif response.status == 429:
-                    LOGGER("NexGenBots").warning("Rate limit exceeded!")
-                    return []
-                    
-                else:
-                    LOGGER("NexGenBots").error(f"API error: {response.status}")
-                    return []
-                    
-        except asyncio.TimeoutError:
-            LOGGER("NexGenBots").error("Request timeout!")
-            return []
-        except Exception as e:
-            LOGGER("NexGenBots").error(f"Search failed: {e}")
-            return []
+        # Temporarily disabled - API returning 404
+        # Will fallback to direct YouTube search
+        LOGGER("NexGenBots").debug(f"NexGenBots API temporarily disabled, using fallback")
+        return []
     
     def _format_results(self, results: List[Dict]) -> List[Dict]:
         """Format API results to match expected format"""

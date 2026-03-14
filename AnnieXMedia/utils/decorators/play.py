@@ -105,13 +105,13 @@ def PlayWrapper(command):
                 elif message.from_user.id not in admins:
                     return await message.reply_text(_["play_4"])
 
-        if message.command[0][0] == "v":
+        # Check if video mode is requested
+        if message.command[0][0] == "v" or message.command[0].startswith("vplay"):
+            video = True
+        elif "-v" in message.text:
             video = True
         else:
-            if "-v" in message.text:
-                video = True
-            else:
-                video = True if message.command[0][1] == "v" else None
+            video = False
 
         if message.command[0][-1] == "e":
             if not await is_active_chat(chat_id):

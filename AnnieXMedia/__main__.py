@@ -11,6 +11,7 @@ from AnnieXMedia.core.call import StreamController
 from AnnieXMedia.misc import sudo
 from AnnieXMedia.plugins import ALL_MODULES
 from AnnieXMedia.utils.database import get_banned_users, get_gbanned
+from AnnieXMedia.utils.scheduler import start_scheduler
 from config import BANNED_USERS
 
 
@@ -45,6 +46,9 @@ async def init():
 
     await userbot.start()
     await StreamController.start()
+    
+    # Start auto-restart and cache cleanup scheduler
+    await start_scheduler()
 
     try:
         await StreamController.stream_call("http://docs.evostream.com/sample_content/assets/sintel1m720p.mp4")

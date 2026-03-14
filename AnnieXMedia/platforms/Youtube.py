@@ -10,8 +10,8 @@ from typing import Union
 from pyrogram.enums import MessageEntityType
 from pyrogram.types import Message
 from youtubesearchpython.aio import VideosSearch, Playlist
-from AnnieXMusic.utils.database import is_on_off
-from AnnieXMusic.utils.formatters import time_to_seconds
+from AnnieXMedia.utils.database import is_on_off
+from AnnieXMedia.utils.formatters import time_to_seconds
 
 from config import API_URL, VIDEO_API_URL, API_KEY
 

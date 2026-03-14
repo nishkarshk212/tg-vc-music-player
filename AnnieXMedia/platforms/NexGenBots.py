@@ -10,10 +10,13 @@ from config import API_KEY
 
 
 class NexGenBotsSearch:
-    """NexGenBots API Client for searching songs"""
+    """NexGenBots API Client for YouTube song downloads
+    API: https://pvtz.nexgenbots.xyz/docs
+    """
     
     def __init__(self):
-        self.base_url = "https://api.nexgenbots.xyz/api/search"
+        self.base_url = "https://pvtz.nexgenbots.xyz"
+        self.song_url = f"{self.base_url}/song"
         self.api_key = API_KEY or "NxGBNexGenBots448436"
         self.session: Optional[aiohttp.ClientSession] = None
         
@@ -22,8 +25,6 @@ class NexGenBotsSearch:
         if self.session is None or self.session.closed:
             self.session = aiohttp.ClientSession(
                 headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json",
                     "User-Agent": "AnnieXMusic/1.0"
                 }
             )
@@ -34,16 +35,15 @@ class NexGenBotsSearch:
         if self.session and not self.session.closed:
             await self.session.close()
     
-    async def search(self, query: str, limit: int = 10) -> List[Dict]:
+    async def get_song_download(self, video_id: str) -> Optional[str]:
         """
-        Search for songs using NexGenBots API
+        Get download URL for a specific song/video using NexGenBots API
         
         Args:
-            query: Search query (song name, artist, etc.)
-            limit: Maximum number of results
+            video_id: YouTube video ID
             
         Returns:
-            List of search results with video information
+            Download URL or None
         """
         if not self.api_key:
             LOGGER("NexGenBots").warning("API_KEY not configured, falling back to default")
@@ -51,43 +51,50 @@ class NexGenBotsSearch:
         try:
             session = await self._get_session()
             
-            # Use correct endpoint with apikey parameter
+            # Use /song/{vidid} endpoint with api parameter
+            url = f"{self.song_url}/{video_id}"
             params = {
-                "query": query,
-                "limit": limit,
-                "apikey": self.api_key  # Changed from 'key' to 'apikey'
+                "api": self.api_key
             }
             
-            async with session.get(self.base_url, params=params, timeout=10) as response:
+            async with session.get(url, params=params, timeout=15) as response:
                 if response.status == 200:
                     data = await response.json()
-                    results = data.get("results", []) or data.get("data", []) or data.get("videos", [])
-                    
-                    if results:
-                        LOGGER("NexGenBots").info(f"Found {len(results)} results for '{query}'")
-                        return self._format_results(results)
-                    else:
-                        LOGGER("NexGenBots").debug(f"No results found for '{query}'")
-                        return []
-                        
+                    LOGGER("NexGenBots").info(f"Got download URL for {video_id}")
+                    return data  # Return full response for processing
                 elif response.status == 401:
                     LOGGER("NexGenBots").error("Invalid API key!")
-                    return []
-                    
-                elif response.status == 429:
-                    LOGGER("NexGenBots").warning("Rate limit exceeded!")
-                    return []
-                    
+                    return None
                 else:
-                    LOGGER("NexGenBots").error(f"API error: {response.status}")
-                    return []
+                    LOGGER("NexGenBots").error(f"Song API error: {response.status}")
+                    try:
+                        error_data = await response.json()
+                        LOGGER("NexGenBots").error(f"Error details: {error_data}")
+                    except:
+                        pass
+                    return None
                     
         except asyncio.TimeoutError:
             LOGGER("NexGenBots").error("Request timeout!")
-            return []
+            return None
         except Exception as e:
-            LOGGER("NexGenBots").error(f"Search failed: {e}")
-            return []
+            LOGGER("NexGenBots").error(f"Failed to get song: {e}")
+            return None
+    
+    async def search(self, query: str, limit: int = 10) -> List[Dict]:
+        """
+        Note: NexGenBots API does NOT provide search functionality.
+        This method returns empty list. Use youtubesearchpython for search.
+        
+        Args:
+            query: Search query
+            limit: Max results
+            
+        Returns:
+            Empty list (search not supported)
+        """
+        LOGGER("NexGenBots").debug("Search not supported by NexGenBots API")
+        return []
     
     def _format_results(self, results: List[Dict]) -> List[Dict]:
         """Format API results to match expected format"""

@@ -153,13 +153,16 @@ async def stream(
         thumbnail = result["thumb"]
 
         try:
+            print(f"[FAST] Downloading track with fast mode...")
             file_path, direct = await YouTube.download(
                 vidid, mystic, video=is_video, videoid=vidid
             )
-        except Exception:
-            raise AssistantErr(_["play_14"])
-        if not file_path:
-            raise AssistantErr(_["play_14"])
+            if not file_path:
+                print(f"[ERROR] Download returned None for {vidid}")
+                raise AssistantErr(_["play_14"])
+        except Exception as e:
+            print(f"[DOWNLOAD ERROR] {type(e).__name__}: {e}")
+            raise AssistantErr(f"Failed to download track. Error: {str(e)[:100]}")
 
         if await is_active_chat(chat_id):
             await put_queue(

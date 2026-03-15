@@ -27,28 +27,29 @@ def cookie_txt_file():
     return cookie_file
 
 
-async def download_song(link: str):
+async def download_song(link: str, fast_mode: bool = True):
     video_id = link.split('v=')[-1].split('&')[0]
 
     download_folder = "downloads"
     for ext in ["mp3", "m4a", "webm"]:
         file_path = f"{download_folder}/{video_id}.{ext}"
         if os.path.exists(file_path):
+            print(f"[FAST] Using cached audio: {file_path}")
             return file_path
     
-    # Check if API_URL is configured
-    if not API_URL or not API_KEY:
-        print("[INFO] API_URL not configured, using NexGenBots API as fallback")
+    # Use NexGen API FIRST (fastest)
+    if fast_mode:
         try:
             from AnnieXMedia.platforms.NexGenBots import get_nexgen_client
             client = get_nexgen_client()
             
-            # Get download data from NexGenBots
+            print(f"[FAST] Fetching audio from NexGen API: {video_id}")
             download_data = await client.get_song_download(video_id)
+            
             if download_data and download_data.get("status") == "done":
                 download_url = download_data.get("link")
                 if download_url:
-                    # Download the file
+                    print(f"[FAST] Got audio URL from NexGen, downloading...")
                     file_extension = download_data.get("format", "mp3").lower()
                     file_name = f"{video_id}.{file_extension}"
                     file_path = os.path.join(download_folder, file_name)
@@ -58,17 +59,24 @@ async def download_song(link: str):
                         async with session.get(download_url) as response:
                             with open(file_path, 'wb') as f:
                                 while True:
-                                    chunk = await response.content.read(8192)
+                                    chunk = await response.content.read(16384)  # Faster
                                     if not chunk:
                                         break
                                     f.write(chunk)
+                    print(f"[FAST] Audio download complete: {file_path}")
                     return file_path
         except Exception as e:
-            print(f"[NexGenBots Fallback Error] {e}")
-            return None
+            print(f"[NexGenBots Audio Error] {e}")
+            print("[INFO] Falling back to alternative method...")
     
     # Use custom API if configured
-    song_url = f"{API_URL}/song/{video_id}?api={API_KEY}"
+    print(f"[FALLBACK] Using API_URL for audio...")
+    if API_URL and API_KEY:
+        song_url = f"{API_URL}/song/{video_id}?api={API_KEY}"
+    else:
+        print("[ERROR] No API configured!")
+        return None
+        
     async with aiohttp.ClientSession() as session:
         for attempt in range(10):
             try:
@@ -111,46 +119,56 @@ async def download_song(link: str):
             print("⏱️ Max retries reached. Still downloading...")
             return None
 
-async def download_video(link: str):
+async def download_video(link: str, fast_mode: bool = True):
     video_id = link.split('v=')[-1].split('&')[0]
 
     download_folder = "downloads"
     for ext in ["mp4", "webm", "mkv"]:
         file_path = f"{download_folder}/{video_id}.{ext}"
         if os.path.exists(file_path):
+            print(f"[FAST] Using cached file: {file_path}")
             return file_path
     
-    # Try NexGenBots API first
-    try:
-        from AnnieXMedia.platforms.NexGenBots import get_nexgen_client
-        client = get_nexgen_client()
-        
-        # Get video download data from NexGenBots
-        download_data = await client.get_video_download(video_id)
-        if download_data and download_data.get("status") == "done":
-            download_url = download_data.get("link")
-            if download_url:
-                # Download the file
-                file_extension = download_data.get("format", "mp4").lower()
-                file_name = f"{video_id}.{file_extension}"
-                file_path = os.path.join(download_folder, file_name)
-                os.makedirs(download_folder, exist_ok=True)
-                
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(download_url) as response:
-                        with open(file_path, 'wb') as f:
-                            while True:
-                                chunk = await response.content.read(8192)
-                                if not chunk:
-                                    break
-                                f.write(chunk)
-                return file_path
-    except Exception as e:
-        print(f"[NexGenBots Video Error] {e}")
+    # Try NexGenBots API first (FAST MODE)
+    if fast_mode:
+        try:
+            from AnnieXMedia.platforms.NexGenBots import get_nexgen_client
+            client = get_nexgen_client()
+            
+            print(f"[FAST] Fetching from NexGen API: {video_id}")
+            download_data = await client.get_video_download(video_id)
+            
+            if download_data and download_data.get("status") == "done":
+                download_url = download_data.get("link")
+                if download_url:
+                    print(f"[FAST] Got URL from NexGen, downloading...")
+                    file_extension = download_data.get("format", "mp4").lower()
+                    file_name = f"{video_id}.{file_extension}"
+                    file_path = os.path.join(download_folder, file_name)
+                    os.makedirs(download_folder, exist_ok=True)
+                    
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(download_url) as response:
+                            with open(file_path, 'wb') as f:
+                                while True:
+                                    chunk = await response.content.read(16384)  # Faster chunk size
+                                    if not chunk:
+                                        break
+                                    f.write(chunk)
+                    print(f"[FAST] Download complete: {file_path}")
+                    return file_path
+        except Exception as e:
+            print(f"[NexGenBots Video Error] {e}")
+            print("[INFO] Falling back to alternative method...")
     
     # Fallback to custom API if configured
+    print(f"[FALLBACK] Using VIDEO_API_URL fallback...")
     if VIDEO_API_URL and API_KEY:
         video_url = f"{VIDEO_API_URL}/video/{video_id}?api={API_KEY}"
+    else:
+        print("[ERROR] No API configured!")
+        return None
+        
     async with aiohttp.ClientSession() as session:
         for attempt in range(10):
             try:

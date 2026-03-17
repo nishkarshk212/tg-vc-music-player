@@ -65,14 +65,21 @@ class Userbot:
             config.STRING5,
         ][index - 1]
         if not string_attr:
+            LOGGER(__name__).info(f"Assistant {index} session string not provided, skipping...")
             return
 
         try:
+            # Validate session string format before starting
+            if not string_attr.startswith("BQI") and not string_attr.startswith("A8E"):
+                LOGGER(__name__).error(f"Assistant {index} has invalid session string format. Skipping...")
+                return
+            
             await client.start()
             for group in GROUPS_TO_JOIN:
                 try:
                     await client.join_chat(group)
-                except Exception:
+                except Exception as join_error:
+                    LOGGER(__name__).debug(f"Assistant {index} couldn't join {group}: {join_error}")
                     pass
 
             assistants.append(index)
@@ -81,11 +88,11 @@ class Userbot:
                 await client.send_message(
                     config.LOGGER_ID, f"Annie's Assistant {index} Started"
                 )
-            except Exception:
+            except Exception as log_error:
                 LOGGER(__name__).error(
-                    f"Assistant {index} can't access the log group. Check permissions!"
+                    f"Assistant {index} can't access the log group. Check permissions! Error: {log_error}"
                 )
-                exit()
+                # Don't exit, just continue without sending log message
 
             me = await client.get_me()
             client.id, client.name, client.username = me.id, me.first_name, me.username
@@ -94,7 +101,11 @@ class Userbot:
             LOGGER(__name__).info(f"Assistant {index} Started as {client.name}")
 
         except Exception as e:
-            LOGGER(__name__).error(f"Failed to start Assistant {index}: {e}")
+            error_msg = str(e)
+            if "unpack requires a buffer" in error_msg or "Invalid session string" in error_msg:
+                LOGGER(__name__).error(f"Assistant {index} has corrupted session string. Please regenerate STRING{index}. Error: {e}")
+            else:
+                LOGGER(__name__).error(f"Failed to start Assistant {index}: {e}")
 
     async def start(self):
         LOGGER(__name__).info("Starting Annie's Assistants...")

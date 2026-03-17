@@ -1,5 +1,6 @@
 ﻿# Authored By Certified Coders © 2025
 import asyncio
+import logging
 import requests
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -36,7 +37,9 @@ def resolve_raw_cookie_url(url: str) -> str:
 @capture_internal_err
 async def fetch_and_store_cookies():
     if not COOKIE_URL:
-        raise EnvironmentError("⚠️ ᴄᴏᴏᴋɪᴇ_ᴜʀʟ ɴᴏᴛ sᴇᴛ ɪɴ ᴇɴᴠ.")
+        LOGGER = logging.getLogger("AnnieXMedia.cookie_handler")
+        LOGGER.warning("⚠️ ᴄᴏᴏᴋɪᴇ_ᴜʀʟ ɴᴏᴛ sᴇᴛ ɪɴ ᴇɴᴠ. Cᴏᴏᴋɪᴇ-ʙᴀsᴇᴅ ᴅᴏᴡɴʟᴏᴀᴅs ᴡɪʟʟ ɴᴏᴛ ᴡᴏʀᴋ.")
+        return None
 
     raw_url = resolve_raw_cookie_url(COOKIE_URL)
 
@@ -49,18 +52,28 @@ async def fetch_and_store_cookies():
         )
         response.raise_for_status()
     except Exception as e:
-        raise ConnectionError(f"⚠️ ᴄᴀɴ'ᴛ ꜰᴇᴛᴄʜ ᴄᴏᴏᴋɪᴇs:\n{e}")
+        LOGGER = logging.getLogger("AnnieXMedia.cookie_handler")
+        LOGGER.error(f"⚠️ ᴄᴀɴ'ᴛ ꜰᴇᴛᴄʜ ᴄᴏᴏᴋɪᴇs:\n{e}")
+        return None
 
     cookies = (response.text or "").strip()
 
     if not cookies.startswith("# Netscape"):
-        raise ValueError("⚠️ ɪɴᴠᴀʟɪᴅ ᴄᴏᴏᴋɪᴇ ꜰᴏʀᴍᴀᴛ. ɴᴇᴇᴅs ɴᴇᴛsᴄᴀᴘᴇ ꜰᴏʀᴍᴀᴛ.")
+        LOGGER = logging.getLogger("AnnieXMedia.cookie_handler")
+        LOGGER.error("⚠️ ɪɴᴠᴀʟɪᴅ ᴄᴏᴏᴋɪᴇ ꜰᴏʀᴍᴀᴛ. ɴᴇᴇᴅs ɴᴇᴛsᴄᴀᴘᴇ ꜰᴏʀᴍᴀᴛ.")
+        return None
 
     if len(cookies) < 100:
-        raise ValueError("⚠️ ᴄᴏᴏᴋɪᴇ ᴄᴏɴᴛᴇɴᴛ ᴛᴏᴏ sʜᴏʀᴛ. ᴘᴏssɪʙʟʏ ɪɴᴠᴀʟɪᴅ.")
+        LOGGER = logging.getLogger("AnnieXMedia.cookie_handler")
+        LOGGER.error("⚠️ ᴄᴏᴏᴋɪᴇ ᴄᴏɴᴛᴇɴᴛ ᴛᴏᴏ sʜᴏʀᴛ. ᴘᴏssɪʙʟʏ ɪɴᴠᴀʟɪᴅ.")
+        return None
 
     COOKIE_PATH.parent.mkdir(parents=True, exist_ok=True)
     try:
         COOKIE_PATH.write_text(cookies, encoding="utf-8")
+        LOGGER = logging.getLogger("AnnieXMedia.cookie_handler")
+        LOGGER.info("✅ Cᴏᴏᴋɪᴇs ғᴇᴛᴄʜᴇᴅ ᴀɴᴅ sᴀᴠᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!")
     except Exception as e:
-        raise IOError(f"⚠️ ғᴀɪʟᴇᴅ ᴛᴏ sᴀᴠᴇ ᴄᴏᴏᴋɪᴇs: {e}")
+        LOGGER = logging.getLogger("AnnieXMedia.cookie_handler")
+        LOGGER.error(f"⚠️ ғᴀɪʟᴇᴅ ᴛᴏ sᴀᴠᴇ ᴄᴏᴏᴋɪᴇs: {e}")
+        return None

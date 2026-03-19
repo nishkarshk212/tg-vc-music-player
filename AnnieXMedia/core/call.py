@@ -50,7 +50,6 @@ def dynamic_media_stream(path: str, video: bool = False, ffmpeg_params: str = No
             audio_flags=MediaStream.Flags.REQUIRED,
             video_flags=MediaStream.Flags.REQUIRED,
             audio_ffmpeg_parameters=audio_ffmpeg_params,
-            video_flags=MediaStream.Flags.IGNORE,
             ffmpeg_parameters=ffmpeg_params,
         )
     else:

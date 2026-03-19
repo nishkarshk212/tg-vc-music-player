@@ -17,6 +17,9 @@ def setting_markup(_):
             InlineKeyboardButton(text=_["ST_B_4"], callback_data="VOTE_SETTINGS"),
         ],
         [
+            InlineKeyboardButton(text=_["ST_B_15"], callback_data="SKIP_PERMISSION_SETTINGS"),
+        ],
+        [
             InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close"),
         ],
     ]
@@ -100,6 +103,49 @@ def playmode_users_markup(
             InlineKeyboardButton(
                 text=_["ST_B_8"] if Playtype == True else _["ST_B_9"],
                 callback_data="TOGGLE_PLAY_TYPE",
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                text=_["BACK_BUTTON"],
+                callback_data="SETTINGS_BACK",
+            ),
+            InlineKeyboardButton(text=_["CLOSE_BUTTON"], callback_data="close"),
+        ],
+    ]
+    return buttons
+
+
+def skip_permission_markup(_, current_permission: str):
+    """
+    Inline keyboard for skip permission settings.
+    Shows 3 buttons: Admin, Members, Everyone
+    with checkmark on currently selected option.
+    """
+    # Map permissions to display text
+    perm_texts = {
+        "admin": _["ST_B_16"],      # "Admins Only"
+        "members": _["ST_B_17"],    # "All Members"
+        "everyone": _["ST_B_18"],   # "Everyone"
+    }
+    
+    buttons = [
+        [
+            InlineKeyboardButton(
+                text=f"✓ {perm_texts['admin']}" if current_permission == "admin" else perm_texts["admin"],
+                callback_data="SKIP_PERM_ADMIN"
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                text=f"✓ {perm_texts['members']}" if current_permission == "members" else perm_texts["members"],
+                callback_data="SKIP_PERM_MEMBERS"
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                text=f"✓ {perm_texts['everyone']}" if current_permission == "everyone" else perm_texts["everyone"],
+                callback_data="SKIP_PERM_EVERYONE"
             ),
         ],
         [

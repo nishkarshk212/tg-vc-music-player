@@ -20,6 +20,7 @@ onoffdb = mongodb.onoffper
 playmodedb = mongodb.playmode
 playtypedb = mongodb.playtypedb
 skipdb = mongodb.skipmode
+skip_permission_db = mongodb.skip_permission  # New collection for skip permissions
 sudoersdb = mongodb.sudoers
 usersdb = mongodb.tgusersdb
 
@@ -38,6 +39,7 @@ pause = {}
 playmode = {}
 playtype = {}
 skipmode = {}
+skip_permissions_cache = {}  # Cache for skip permissions: 'admin', 'members', 'everyone'
 mute = {}
 
 async def get_assistant_number(chat_id: int) -> str:
@@ -177,6 +179,80 @@ async def skip_off(chat_id: int):
     user = await skipdb.find_one({"chat_id": chat_id})
     if not user:
         return await skipdb.insert_one({"chat_id": chat_id})
+
+
+# ─── SKIP PERMISSION SETTINGS ──────────────────────────────────────
+# Controls WHO can use skip command: 'admin', 'members', or 'everyone'
+
+async def get_skip_permission(chat_id: int) -> str:
+    """Get who can skip songs in this chat (admin/members/everyone)"""
+    perm = skip_permissions_cache.get(chat_id)
+    if not perm:
+        doc = await skip_permission_db.find_one({"chat_id": chat_id})
+        if not doc:
+            # Default to admin only
+            skip_permissions_cache[chat_id] = "admin"
+            return "admin"
+        skip_permissions_cache[chat_id] = doc.get("permission", "admin")
+        return skip_permissions_cache[chat_id]
+    return perm
+
+
+async def set_skip_permission(chat_id: int, permission: str):
+    """Set who can skip songs: 'admin', 'members', or 'everyone'"""
+    if permission not in ["admin", "members", "everyone"]:
+        raise ValueError(f"Invalid skip permission: {permission}")
+    
+    skip_permissions_cache[chat_id] = permission
+    await skip_permission_db.update_one(
+        {"chat_id": chat_id},
+        {"$set": {"permission": permission}},
+        upsert=True
+    )
+
+
+async def can_skip_song(chat_id: int, user_id: int) -> bool:
+    """
+    Check if a user can skip songs based on permission settings.
+    Returns True if user has permission to skip, False otherwise.
+    """
+    from pyrogram.enums import ChatMemberStatus
+    from AnnieXMedia import app
+    
+    permission = await get_skip_permission(chat_id)
+    
+    # Everyone can skip
+    if permission == "everyone":
+        return True
+    
+    # Get user's member status
+    try:
+        member = await app.get_chat_member(chat_id, user_id)
+    except Exception:
+        return False
+    
+    # Admins + Auth users can skip
+    if permission == "admin":
+        if member.status in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
+            return True
+        # Check if in auth users
+        auth_users = await get_authuser_names(chat_id)
+        if str(user_id) in auth_users:
+            return True
+        return False
+    
+    # All group members can skip (not bots)
+    if permission == "members":
+        # Check if user is a member (anyone except bots)
+        try:
+            user = await app.get_users(user_id)
+            if user.is_bot:
+                return False
+            return True
+        except Exception:
+            return False
+    
+    return False
 
 
 async def get_upvote_count(chat_id: int) -> int:

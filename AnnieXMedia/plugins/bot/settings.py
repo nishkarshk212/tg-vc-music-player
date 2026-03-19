@@ -20,6 +20,8 @@ from AnnieXMedia.utils.database import (
     set_upvotes,
     skip_off,
     skip_on,
+    get_skip_permission,
+    set_skip_permission,
 )
 from AnnieXMedia.utils.decorators.admins import ActualAdminCB
 from AnnieXMedia.utils.decorators.language import language, languageCB
@@ -28,6 +30,7 @@ from AnnieXMedia.utils.inline.settings import (
     playmode_users_markup,
     setting_markup,
     vote_mode_markup,
+    skip_permission_markup,
 )
 from AnnieXMedia.utils.inline.start import private_panel
 from config import BANNED_USERS, OWNER_ID
@@ -83,7 +86,7 @@ async def settings_back_markup(client, callback: CallbackQuery, _):
 
 @app.on_callback_query(
     filters.regex(
-        r"^(SEARCH_MODE_INFO|PLAY_TYPE_INFO|CHANNEL_MODE_INFO|AUTH_USERS_INFO|CURRENT_VOTE_INFO|VOTE_MODE_INFO|PLAYBACK_SETTINGS|AUTH_SETTINGS|VOTE_SETTINGS)$"
+        r"^(SEARCH_MODE_INFO|PLAY_TYPE_INFO|CHANNEL_MODE_INFO|AUTH_USERS_INFO|CURRENT_VOTE_INFO|VOTE_MODE_INFO|PLAYBACK_SETTINGS|AUTH_SETTINGS|VOTE_SETTINGS|SKIP_PERMISSION_SETTINGS)$"
     ) & ~BANNED_USERS
 )
 @languageCB
@@ -143,6 +146,13 @@ async def without_admin_rights(client, callback: CallbackQuery, _):
         mode = await is_skipmode(callback.message.chat.id)
         current = await get_upvote_count(callback.message.chat.id)
         buttons = vote_mode_markup(_, current, mode)
+    if command == "SKIP_PERMISSION_SETTINGS":
+        try:
+            await callback.answer(_["set_cb_6"], show_alert=True)
+        except Exception:
+            pass
+        current_perm = await get_skip_permission(callback.message.chat.id)
+        buttons = skip_permission_markup(_, current_perm)
     try:
         return await callback.edit_message_reply_markup(reply_markup=InlineKeyboardMarkup(buttons))
     except MessageNotModified:
@@ -328,6 +338,39 @@ async def vote_change(client, callback: CallbackQuery, _):
     
     current = await get_upvote_count(callback.message.chat.id)
     buttons = vote_mode_markup(_, current, mod)
+    
+    try:
+        return await callback.edit_message_reply_markup(reply_markup=InlineKeyboardMarkup(buttons))
+    except MessageNotModified:
+        return
+
+
+# ─── SKIP PERMISSION CHANGE ─────────────────────────────────────────
+
+@app.on_callback_query(
+    filters.regex(r"^(SKIP_PERM_ADMIN|SKIP_PERM_MEMBERS|SKIP_PERM_EVERYONE)$") & ~BANNED_USERS
+)
+@ActualAdminCB
+async def skip_permission_change(client, callback: CallbackQuery, _):
+    command = callback.matches[0].group(1)
+    
+    try:
+        await callback.answer(_["set_cb_3"], show_alert=True)
+    except Exception:
+        pass
+    
+    # Map callback command to permission value
+    perm_map = {
+        "SKIP_PERM_ADMIN": "admin",
+        "SKIP_PERM_MEMBERS": "members",
+        "SKIP_PERM_EVERYONE": "everyone",
+    }
+    
+    new_permission = perm_map[command]
+    await set_skip_permission(callback.message.chat.id, new_permission)
+    
+    # Refresh the keyboard with new selection
+    buttons = skip_permission_markup(_, new_permission)
     
     try:
         return await callback.edit_message_reply_markup(reply_markup=InlineKeyboardMarkup(buttons))

@@ -8,7 +8,8 @@ import os
 import shutil
 import time
 from datetime import datetime
-from AnnieXMedia import LOGGER
+from AnnieXMedia import LOGGER, app
+from AnnieXMedia.utils.database import get_served_chats
 
 
 async def clear_cache():
@@ -63,10 +64,37 @@ async def schedule_auto_restart():
             restart_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             LOGGER("Scheduler").info(f"Scheduled restart initiated at {restart_time}")
             
+            # Send notification to all served chats about scheduled restart
+            try:
+                served_chats = await get_served_chats()
+                notification_message = (
+                    f"🔄 <b>Scheduled Maintenance Restart</b>\n\n"
+                    f"{app.mention} will restart now for performance optimization.\n\n"
+                    f"⏱️ Expected downtime: <b>10-15 seconds</b>\n"
+                    f"🗑️ Cache cleared: <b>{cleared} items</b>\n\n"
+                    f"✅ Bot will be back online shortly!"
+                )
+                
+                sent_count = 0
+                for chat in served_chats:
+                    try:
+                        chat_id = int(chat["chat_id"])
+                        await app.send_message(chat_id, notification_message)
+                        sent_count += 1
+                        await asyncio.sleep(0.1)  # Small delay to avoid flood
+                    except Exception:
+                        # Skip chats where bot can't send messages
+                        continue
+                
+                LOGGER("Scheduler").info(f"Restart notification sent to {sent_count} chats")
+            except Exception as notify_error:
+                LOGGER("Scheduler").error(f"Failed to send restart notifications: {notify_error}")
+            
             # Save restart flag
             with open(".auto_restart", "w") as f:
                 f.write(f"Auto-restarted at: {restart_time}\n")
                 f.write(f"Cache cleared: {cleared} items\n")
+                f.write(f"Notifications sent: {sent_count if 'sent_count' in locals() else 0}\n")
             
             # Restart the bot
             LOGGER("Scheduler").info("Restarting bot...")

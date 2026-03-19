@@ -39,8 +39,8 @@ autoend = {}
 counter = {}
 
 def dynamic_media_stream(path: str, video: bool = False, ffmpeg_params: str = None) -> MediaStream:
-    # Enhanced audio quality with STUDIO grade and FFmpeg audio filters
-    audio_ffmpeg_params = "-af 'equalizer=f=1000:width_type=q:width=2:g=3,volume=1.5'" if not ffmpeg_params else ffmpeg_params
+    # Enhanced audio quality with STUDIO grade
+    # Note: FFmpeg audio filters are applied via ffmpeg_parameters
     
     if video:
         return MediaStream(
@@ -49,7 +49,6 @@ def dynamic_media_stream(path: str, video: bool = False, ffmpeg_params: str = No
             video_parameters=VideoQuality.HD_720p,
             audio_flags=MediaStream.Flags.REQUIRED,
             video_flags=MediaStream.Flags.REQUIRED,
-            audio_ffmpeg_parameters=audio_ffmpeg_params,
             ffmpeg_parameters=ffmpeg_params,
         )
     else:
@@ -58,7 +57,6 @@ def dynamic_media_stream(path: str, video: bool = False, ffmpeg_params: str = No
             audio_parameters=AudioQuality.STUDIO,
             audio_flags=MediaStream.Flags.REQUIRED,
             video_flags=MediaStream.Flags.IGNORE,
-            audio_ffmpeg_parameters=audio_ffmpeg_params,
             ffmpeg_parameters=ffmpeg_params,
         )
 

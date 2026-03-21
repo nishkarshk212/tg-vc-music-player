@@ -108,9 +108,17 @@ async def download_song(link: str, fast_mode: bool = True):
                                     f.write(chunk)
                         return file_path
                     elif status == "downloading":
+                        print(f"[WAIT] API is still processing... (attempt {attempt + 1}/10)")
                         await asyncio.sleep(4)
                     else:
+                        # Log detailed error info for debugging
                         error_msg = data.get("error") or data.get("message") or f"Unexpected status '{status}'"
+                        print(f"[API ERROR] Status: {status}, Message: {error_msg}")
+                        
+                        # If it's a real error (not just processing), try fallback immediately
+                        if status == "error":
+                            print("[INFO] API reported error, will try alternative methods...")
+                        
                         raise Exception(f"API error: {error_msg}")
             except Exception as e:
                 print(f"[FAIL] {e}")
